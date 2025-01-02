@@ -124,7 +124,7 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
 
     return (
       <div className={`h-full ${color} flex flex-col border-r border-b`}>
-        <div className={`p-3 border-b ${color} flex justify-between items-center`}>
+        <div className={`p-3 border-b ${color} flex justify-between items-center sticky top-0 z-10`}>
           <h3 className={`font-bold ${textColor}`}>{text}</h3>
           <button
             onClick={() => onAddTask?.(quadrant)}
@@ -137,7 +137,7 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
         </div>
         
         <div 
-          className="flex-1 overflow-y-auto p-3 task-list"
+          className="flex-1 overflow-y-auto p-3 task-list scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400"
           onDragOver={(e) => handleDragOver(e, quadrant, quadrantTasks.length)}
           onDrop={(e) => handleDrop(e, quadrant, quadrantTasks.length)}
         >
@@ -218,7 +218,7 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
   };
 
   return (
-    <div className="w-full h-[600px] grid grid-cols-2 grid-rows-2 bg-white rounded-lg shadow overflow-hidden">
+    <div className="w-full h-[800px] grid grid-cols-2 grid-rows-2 bg-white rounded-lg shadow overflow-hidden">
       {renderQuadrant(1)}
       {renderQuadrant(2)}
       {renderQuadrant(3)}

@@ -12,8 +12,13 @@ module.exports = {
         success: '#10b981',
         danger: '#ef4444',
       },
+      height: {
+        '[800px]': '800px',
+      }
     },
   },
-  plugins: [],
+  plugins: [
+    require('tailwind-scrollbar'),
+  ],
 }
 
