@@ -116,6 +116,13 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
     }
   };
 
+  // 添加一个工具函数来截取文本
+  const truncateText = (text: string, maxLength: number) => {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.slice(0, maxLength) + '...';
+  };
+
   const renderQuadrant = (quadrant: 1 | 2 | 3 | 4) => {
     const quadrantTasks = tasks
       .filter(task => task.quadrant === quadrant)
@@ -136,11 +143,7 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
           </button>
         </div>
         
-        <div 
-          className="flex-1 overflow-y-auto p-3 task-list scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400"
-          onDragOver={(e) => handleDragOver(e, quadrant, quadrantTasks.length)}
-          onDrop={(e) => handleDrop(e, quadrant, quadrantTasks.length)}
-        >
+        <div className="flex-1 overflow-y-auto p-3 task-list custom-scrollbar">
           {quadrantTasks.map((task, index) => (
             <div
               key={task.id}
@@ -155,7 +158,7 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
                 ${draggedTask?.id === task.id ? 'opacity-50' : 'opacity-100'}`}
             >
               <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={(e) => {
@@ -174,23 +177,31 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
                       )}
                     </button>
                     <div 
-                      className="flex-1 cursor-pointer"
+                      className="flex-1 cursor-pointer min-w-0"
                       onClick={() => onTaskClick?.(task)}
                     >
-                      <div className={`font-medium ${task.completed ? 'line-through text-gray-400' : ''}`}>
-                        {task.title}
+                      <div 
+                        className={`font-medium truncate ${task.completed ? 'line-through text-gray-400' : ''}`}
+                        title={task.title}
+                      >
+                        {truncateText(task.title, 100)}
                       </div>
                       {task.description && (
-                        <p className="mt-1 text-sm text-gray-500 truncate">
-                          {task.description}
-                        </p>
+                        <div 
+                          className="mt-1 text-sm text-gray-500"
+                          title={task.description}
+                        >
+                          <p className="line-clamp-2 break-words">
+                            {task.description}
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0">
                   <button
-                    className="ml-2 text-gray-400 hover:text-gray-500 cursor-move"
+                    className="text-gray-400 hover:text-gray-500 cursor-move"
                     onMouseDown={(e) => e.preventDefault()}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
