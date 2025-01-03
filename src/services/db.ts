@@ -95,12 +95,15 @@ const initDatabase = async () => {
     }
   } catch (error) {
     console.error('Error initializing database:', error);
-    if (error.name === 'VersionError' || error.name === 'UpgradeError') {
-      console.log('Database version error, deleting and recreating...');
-      await Dexie.delete('QuadrantDB');
-      await db.open();
-      await initializeTestData();
+    if (error instanceof Error) {
+      if (error.name === 'VersionError' || error.name === 'UpgradeError') {
+        console.log('Database version error, deleting and recreating...');
+        await Dexie.delete('QuadrantDB');
+        await db.open();
+        await initializeTestData();
+      }
     }
+    throw error;
   }
 };
 

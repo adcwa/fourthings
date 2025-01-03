@@ -11,7 +11,7 @@ interface QuadrantChartProps {
   onReorder?: (taskId: string, quadrant: 1 | 2 | 3 | 4, newIndex: number) => void;
 }
 
-interface DragItem {
+export interface DragItem {
   taskId: string;
   quadrant: 1 | 2 | 3 | 4;
   index: number;
@@ -34,8 +34,6 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
   onReorder
 }) => {
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
-  const [dragOverQuadrant, setDragOverQuadrant] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const handleDragStart = (e: React.DragEvent, task: Task) => {
     console.log('Drag start with task:', task);
@@ -48,8 +46,6 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
   const handleDragEnd = (e: React.DragEvent) => {
     e.currentTarget.classList.remove('opacity-50');
     setDraggedTask(null);
-    setDragOverQuadrant(null);
-    setDragOverIndex(null);
     // 移除所有放置指示器
     document.querySelectorAll('.drop-indicator').forEach(el => el.remove());
   };
@@ -57,9 +53,6 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
   const handleDragOver = (e: React.DragEvent, quadrant: number, index: number) => {
     e.preventDefault();
     if (!draggedTask) return;
-
-    setDragOverQuadrant(quadrant);
-    setDragOverIndex(index);
 
     // 更新放置指示器
     const taskList = e.currentTarget.closest('.task-list');
@@ -101,8 +94,6 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
 
     // 清理状态
     setDraggedTask(null);
-    setDragOverQuadrant(null);
-    setDragOverIndex(null);
     document.querySelectorAll('.drop-indicator').forEach(el => el.remove());
   };
 
