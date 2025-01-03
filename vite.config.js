@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'icons/*.png'],
       manifest: {
-        name: '四象限任务管理',
-        short_name: '四象限',
+        name: '四件事',
+        short_name: '四件事',
         description: '一个简单的四象限任务管理工具',
         theme_color: '#3b82f6',
         background_color: '#ffffff',
