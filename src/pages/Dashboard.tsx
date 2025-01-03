@@ -103,22 +103,6 @@ export const Dashboard: React.FC = () => {
     return <div className="text-center py-8">加载中...</div>;
   }
 
-  if (tasks.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-gray-500 mb-4">还没有任务</p>
-        <button
-          onClick={() => {
-            setEditingTask(null);
-            setShowTaskForm(true);
-          }}
-          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
-        >
-          添加第一个任务
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">
