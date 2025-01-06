@@ -42,8 +42,11 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    if (window.confirm('确定要删除这个任务吗？')) {
+    try {
       await deleteTask(taskId);
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      setError(error as Error);
     }
   };
 

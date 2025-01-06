@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Task } from '../../services/db';
+import { ConfirmDialog } from '../ConfirmDialog';
 
 interface QuadrantChartProps {
   tasks: Task[];
@@ -34,6 +35,8 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
   onReorder
 }) => {
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDragStart = (e: React.DragEvent, task: Task) => {
     console.log('Drag start with task:', task);
@@ -161,18 +164,26 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
               onDragEnd={handleDragEnd}
               onDragOver={(e) => {
                 e.preventDefault();
-                e.stopPropagation(); // 防止事件冒泡
+                e.stopPropagation();
                 handleDragOver(e, quadrant, index);
               }}
               onDrop={(e) => {
                 e.preventDefault();
-                e.stopPropagation(); // 防止事件冒泡
+                e.stopPropagation();
                 handleDrop(e, quadrant, index);
               }}
               className={`group mb-2 p-3 bg-white rounded-lg shadow-sm border 
                 ${task.completed ? 'border-green-200' : 'border-gray-200'}
                 hover:shadow-md transition-all duration-200
-                ${draggedTask?.id === task.id ? 'opacity-50' : 'opacity-100'}`}
+                ${draggedTask?.id === task.id ? 'opacity-50' : 'opacity-100'}
+                ${isDeleting && taskToDelete?.id === task.id ? 'animate-slide-out' : ''}`}
+              onAnimationEnd={() => {
+                if (isDeleting && taskToDelete?.id === task.id) {
+                  onDeleteTask?.(task.id!);
+                  setTaskToDelete(null);
+                  setIsDeleting(false);
+                }
+              }}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0 overflow-hidden">
@@ -228,7 +239,7 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onDeleteTask?.(task.id!);
+                      setTaskToDelete(task);
                     }}
                     className="ml-2 text-gray-400 hover:text-red-500"
                   >
@@ -256,12 +267,32 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
     );
   };
 
+  // 处理确认删除
+  const handleConfirmDelete = () => {
+    if (taskToDelete && taskToDelete.id) {
+      setIsDeleting(true);
+    }
+  };
+
   return (
-    <div className="w-full h-[800px] grid grid-cols-2 grid-rows-2 bg-white rounded-lg shadow overflow-hidden">
-      {renderQuadrant(1)}
-      {renderQuadrant(2)}
-      {renderQuadrant(3)}
-      {renderQuadrant(4)}
-    </div>
+    <>
+      <div className="w-full h-[800px] grid grid-cols-2 grid-rows-2 bg-white rounded-lg shadow overflow-hidden">
+        {renderQuadrant(1)}
+        {renderQuadrant(2)}
+        {renderQuadrant(3)}
+        {renderQuadrant(4)}
+      </div>
+      
+      <ConfirmDialog
+        isOpen={taskToDelete !== null && !isDeleting}
+        title="删除任务"
+        message={`确定要删除任务"${taskToDelete?.title}"吗？`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          setTaskToDelete(null);
+          setIsDeleting(false);
+        }}
+      />
+    </>
   );
 }; 
