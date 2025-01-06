@@ -172,7 +172,7 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
                 e.stopPropagation();
                 handleDrop(e, quadrant, index);
               }}
-              className={`group mb-2 p-3 bg-white rounded-lg shadow-sm border 
+              className={`group mb-1 p-2 bg-white rounded-lg shadow-sm border 
                 ${task.completed ? 'border-green-200' : 'border-gray-200'}
                 hover:shadow-md transition-all duration-200
                 ${draggedTask?.id === task.id ? 'opacity-50' : 'opacity-100'}
