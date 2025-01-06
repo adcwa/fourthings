@@ -4,7 +4,7 @@ import { ConfirmDialog } from '../ConfirmDialog';
 
 interface QuadrantChartProps {
   tasks: Task[];
-  onTaskMove: (taskId: string, quadrant: 1 | 2 | 3 | 4) => void;
+  onTaskMove: (taskId: string, quadrant: 1 | 2 | 3 | 4, newIndex:number) => void;
   onTaskClick?: (task: Task) => void;
   onAddTask?: (quadrant: 1 | 2 | 3 | 4) => void;
   onDeleteTask?: (taskId: string) => void;
@@ -100,7 +100,7 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
         onReorder?.(taskId, quadrant as 1 | 2 | 3 | 4, index);
       } else {
         // 跨象限移动
-        onTaskMove(taskId, quadrant as 1 | 2 | 3 | 4);
+        onTaskMove(taskId, quadrant as 1 | 2 | 3 | 4, index);
       }
     } catch (error) {
       console.error('Error handling drop:', error);

@@ -17,13 +17,13 @@ export const Dashboard: React.FC = () => {
   
   const { tasks, addTask, updateTask, moveTask, deleteTask } = useTasks(currentUserId, selectedDate);
 
-  const handleTaskMove = async (taskId: string, quadrant: 1 | 2 | 3 | 4) => {
+  const handleTaskMove = async (taskId: string, quadrant: 1 | 2 | 3 | 4, index:number) => {
     try {
       console.log('Dashboard: Moving task:', taskId, 'to quadrant:', quadrant);
       if (!taskId) {
         throw new Error('Invalid taskId');
       }
-      await moveTask(taskId, quadrant);
+      await moveTask(taskId, quadrant,index);
     } catch (error) {
       console.error('Error moving task:', error);
       setError(error as Error);
