@@ -57,14 +57,8 @@ export function useTasks(userId: string, date: string) {
     try {
       console.log('Moving task in DB:', taskId, targetQuadrant, targetIndex);
       
-      // 先检查任务是否存在
       const task = await db.tasks.get(taskId);
-      console.log('Found task:', task);
-
       if (!task) {
-        console.error('Task not found:', taskId);
-        const allTasks = await db.tasks.toArray();
-        console.log('All tasks in DB:', allTasks);
         throw new Error(`Task not found: ${taskId}`);
       }
 
@@ -73,36 +67,34 @@ export function useTasks(userId: string, date: string) {
         .where({ userId, date, quadrant: targetQuadrant })
         .sortBy('order');
 
-      console.log('Target quadrant tasks:', targetQuadrantTasks);
-
       // 计算新的 order 值
       let newOrder: number;
-      if (targetIndex === undefined || targetIndex >= targetQuadrantTasks.length) {
-        newOrder = targetQuadrantTasks.length > 0 
-          ? (targetQuadrantTasks[targetQuadrantTasks.length - 1].order + 1000)
-          : 1000;
+      if (targetQuadrantTasks.length === 0) {
+        // 如果象限为空，使用基础值
+        newOrder = 1000;
+      } else if (targetIndex === 0) {
+        // 如果是移动到第一个位置
+        newOrder = targetQuadrantTasks[0].order - 1000;
+      } else if (targetIndex === undefined || targetIndex >= targetQuadrantTasks.length) {
+        // 如果是移动到最后
+        newOrder = targetQuadrantTasks[targetQuadrantTasks.length - 1].order + 1000;
       } else {
-        newOrder = targetIndex === 0 
-          ? 500
-          : (targetQuadrantTasks[targetIndex - 1].order + targetQuadrantTasks[targetIndex].order) / 2;
+        // 移动到两个任务之间
+        newOrder = (targetQuadrantTasks[targetIndex - 1].order + targetQuadrantTasks[targetIndex].order) / 2;
       }
 
-      console.log('New order value:', newOrder);
-
       // 更新任务
-      const updateResult = await db.tasks.update(taskId, {
+      await db.tasks.update(taskId, {
         quadrant: targetQuadrant,
         order: newOrder,
         updatedAt: new Date()
       });
 
-      console.log('Update result:', updateResult);
-
-      if (!updateResult) {
-        throw new Error(`Failed to update task: ${taskId}`);
+      // 如果 order 值过于接近，重新排序整个象限
+      if (Math.abs(newOrder) > 1000000) {
+        await reorderTasks(targetQuadrant);
       }
 
-      return updateResult;
     } catch (error) {
       console.error('Error moving task:', error);
       throw error;

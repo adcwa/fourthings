@@ -65,20 +65,31 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
     const indicator = document.createElement('div');
     indicator.className = `drop-indicator h-1 my-1 rounded transition-all duration-200 ${getQuadrantColor(quadrant)}`;
     
-    const tasks = Array.from(taskList.children);
-    if (index < tasks.length) {
-      taskList.insertBefore(indicator, tasks[index]);
-    } else {
+    const taskElements = Array.from(taskList.querySelectorAll('.group'));
+    
+    if (taskElements.length === 0) {
+      // 如果象限为空，添加指示器到顶部
+      taskList.insertBefore(indicator, taskList.firstChild);
+    } else if (index === 0) {
+      // 如果是拖到第一个位置，在第一个任务之前添加指示器
+      taskList.insertBefore(indicator, taskElements[0]);
+    } else if (index >= taskElements.length) {
+      // 如果是拖到最后，在最后添加指示器
       taskList.appendChild(indicator);
+    } else {
+      // 在指定位置添加指示器
+      taskList.insertBefore(indicator, taskElements[index]);
     }
   };
 
   const handleDrop = async (e: React.DragEvent, quadrant: number, index: number) => {
     e.preventDefault();
+    e.stopPropagation(); // 防止事件冒泡
+    
     if (!draggedTask) return;
 
     const taskId = e.dataTransfer.getData('taskId');
-    console.log('Drop with taskId:', taskId, 'draggedTask:', draggedTask);
+    console.log('Drop with taskId:', taskId, 'draggedTask:', draggedTask, 'to quadrant:', quadrant, 'at index:', index);
     
     try {
       if (draggedTask.quadrant === quadrant) {
@@ -134,15 +145,30 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
           </button>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-3 task-list custom-scrollbar">
+        <div 
+          className="flex-1 overflow-y-auto p-3 task-list custom-scrollbar"
+          onDragOver={(e) => {
+            e.preventDefault();
+            handleDragOver(e, quadrant, 0); // 允许拖拽到空象限
+          }}
+          onDrop={(e) => handleDrop(e, quadrant, 0)} // 允许放置到空象限
+        >
           {quadrantTasks.map((task, index) => (
             <div
               key={task.id}
               draggable
               onDragStart={(e) => handleDragStart(e, task)}
               onDragEnd={handleDragEnd}
-              onDragOver={(e) => handleDragOver(e, quadrant, index)}
-              onDrop={(e) => handleDrop(e, quadrant, index)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation(); // 防止事件冒泡
+                handleDragOver(e, quadrant, index);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation(); // 防止事件冒泡
+                handleDrop(e, quadrant, index);
+              }}
               className={`group mb-2 p-3 bg-white rounded-lg shadow-sm border 
                 ${task.completed ? 'border-green-200' : 'border-gray-200'}
                 hover:shadow-md transition-all duration-200
@@ -214,6 +240,17 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
               </div>
             </div>
           ))}
+          <div
+            className="h-full min-h-[50px]"
+            onDragOver={(e) => {
+              e.preventDefault();
+              handleDragOver(e, quadrant, quadrantTasks.length);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              handleDrop(e, quadrant, quadrantTasks.length);
+            }}
+          />
         </div>
       </div>
     );
