@@ -5,25 +5,32 @@ import { useTasks } from '../hooks/useTasks';
 import { format } from 'date-fns';
 import { Task } from '../services/db';
 import Dexie from 'dexie';
+import { useAuth } from '../contexts/AuthContext';
 
 export const Dashboard: React.FC = () => {
+  const { user } = useAuth();
   const [selectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [currentUserId] = useState('test-user');
+  // Default to 'test-user' only if no user is logged in (guest mode)
+  // But wait, SyncService uses the real user ID.
+  // If user is logged in, we MUST use user.id.
+  const currentUserId = user?.id || 'test-user';
+
+
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [initialQuadrant, setInitialQuadrant] = useState<1 | 2 | 3 | 4 | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isRecovering, setIsRecovering] = useState(false);
-  
+
   const { tasks, addTask, updateTask, moveTask, deleteTask } = useTasks(currentUserId, selectedDate);
 
-  const handleTaskMove = async (taskId: string, quadrant: 1 | 2 | 3 | 4, index:number) => {
+  const handleTaskMove = async (taskId: string, quadrant: 1 | 2 | 3 | 4, index: number) => {
     try {
       console.log('Dashboard: Moving task:', taskId, 'to quadrant:', quadrant);
       if (!taskId) {
         throw new Error('Invalid taskId');
       }
-      await moveTask(taskId, quadrant,index);
+      await moveTask(taskId, quadrant, index);
     } catch (error) {
       console.error('Error moving task:', error);
       setError(error as Error);
@@ -74,7 +81,7 @@ export const Dashboard: React.FC = () => {
     if (!window.confirm('这将删除所有数据并重置应用，确定要继续吗？')) {
       return;
     }
-    
+
     try {
       setIsRecovering(true);
       await Dexie.delete('QuadrantDB');
@@ -91,7 +98,7 @@ export const Dashboard: React.FC = () => {
     return (
       <div className="text-center py-8 text-red-500">
         <p>出错了：{error.message}</p>
-        <button 
+        <button
           onClick={handleRecovery}
           disabled={isRecovering}
           className="mt-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 disabled:opacity-50"
@@ -110,7 +117,7 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
-       
+
       </div>
 
       {showTaskForm && (

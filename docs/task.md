@@ -1,0 +1,23 @@
+# 任务列表
+
+- [x] 项目分析与规划
+    - [x] 分析 README
+    - [x] 探索代码结构
+    - [x] 确定云同步和认证架构
+    - [x] 创建实施计划
+- [x] 用户系统实现 <!-- id: 1 -->
+    - [x] 设计用户 Schema
+    - [x] 实现注册/登录 UI
+    - [x] 实现认证逻辑 (Token/Session)
+- [x] 数据持久化与云同步 <!-- id: 2 -->
+    - [x] 设计数据库 Schema (兼容 Bytebase/Postgres)
+    - [x] 实现同步 API (支持 camelCase)
+    - [x] 连接前端到云端 API
+    - [x] 实现"云端上传" (备份)
+    - [x] 修复数据格式不一致 (Date parsing)
+    - [x] 实现自动同步 (Login/Hooks)
+- [x] 部署 <!-- id: 3 -->
+    - [x] 配置 Vercel 部署 (vercel.json)
+    - [x] 添加缺失的后端依赖
+    - [x] 设置 Vercel 环境变量
+    - [x] 验证 Vercel 上的功能
