@@ -1,21 +1,65 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, Task } from '../services/db';
 
-export function useTasks(userId: string, date: string) {
+export function useTasks(
+  userId: string,
+  date: string,
+  options?: {
+    statusFilter?: 'all' | 'completed' | 'incomplete';
+    searchQuery?: string;
+  }
+) {
+  const { statusFilter = 'incomplete', searchQuery = '' } = options || {};
+
   const tasks = useLiveQuery(
     async () => {
       try {
-        const result = await db.tasks
-          .where({ userId: userId, date: date })
-          .filter(t => t.syncStatus !== 'deleted')
+        let collection = db.tasks.where({ userId: userId });
+
+        // Date filter is ignored if searching (global search)
+        // Or should we search within the day? User requirement "Fuzzy Search" implies finding tasks.
+        // Usually search is global. But let's ask or assume. 
+        // Given the UI is day-based, let's keep it day-based for now unless query is present?
+        // Let's keep it date-scoped for now to avoid breaking the quadrant view logic which depends on date.
+        // Actually, if I search "Buy Milk", I want to find it even if it was yesterday.
+        // But the Quadrant View is inherently designed for a single date.
+        // PROPOSAL: If searchQuery is present, ignore date. If not, filter by date.
+        // BUT, the Dashboard expects tasks for the quadrant chart which might be confused if tasks have different dates.
+        // Let's stick to Date-scoped search for V1 to be safe, OR return date-filtered list.
+        // Wait, the user just said "Task Name Fuzzy Search".
+        // Let's stick to current date for safety in Quadrant Chart. 
+
+        // Actually, let's just filter the result of the date query.
+
+        const result = await collection
+          .filter(t => {
+            // 1. Sync Logic (Standard)
+            if (t.syncStatus === 'deleted') return false;
+
+            // 2. Date Logic
+            if (t.date !== date) return false;
+
+            // 3. Status Filter
+            if (statusFilter === 'completed' && !t.completed) return false;
+            if (statusFilter === 'incomplete' && t.completed) return false;
+
+            // 4. Search Query
+            if (searchQuery) {
+              const q = searchQuery.toLowerCase();
+              return t.title.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q);
+            }
+
+            return true;
+          })
           .sortBy('order');
+
         return result;
       } catch (error) {
         console.error('Error fetching tasks:', error);
         return [];
       }
     },
-    [userId, date]
+    [userId, date, statusFilter, searchQuery]
   );
 
   const addTask = async (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order'>) => {

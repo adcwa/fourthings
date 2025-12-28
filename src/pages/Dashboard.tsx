@@ -7,12 +7,14 @@ import { Task } from '../services/db';
 import Dexie from 'dexie';
 import { useAuth } from '../contexts/AuthContext';
 
-export const Dashboard: React.FC = () => {
+interface DashboardProps {
+  statusFilter: 'all' | 'completed' | 'incomplete';
+  searchQuery: string;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ statusFilter, searchQuery }) => {
   const { user } = useAuth();
   const [selectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  // Default to 'test-user' only if no user is logged in (guest mode)
-  // But wait, SyncService uses the real user ID.
-  // If user is logged in, we MUST use user.id.
   const currentUserId = user?.id || 'test-user';
 
 
@@ -22,7 +24,10 @@ export const Dashboard: React.FC = () => {
   const [error, setError] = useState<Error | null>(null);
   const [isRecovering, setIsRecovering] = useState(false);
 
-  const { tasks, addTask, updateTask, moveTask, deleteTask } = useTasks(currentUserId, selectedDate);
+  const { tasks, addTask, updateTask, moveTask, deleteTask } = useTasks(currentUserId, selectedDate, {
+    statusFilter,
+    searchQuery
+  });
 
   const handleTaskMove = async (taskId: string, quadrant: 1 | 2 | 3 | 4, index: number) => {
     try {
@@ -116,9 +121,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-
-      </div>
+      {/* UI Controls moved to App Header */}
 
       {showTaskForm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
