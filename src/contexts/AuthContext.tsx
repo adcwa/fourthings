@@ -30,8 +30,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
+
         // Auto download on login
-        import('../services/SyncService').then(({ syncService }) => {
+        // But first, migrate any "Guest" (test-user) data to the new user so it doesn't get lost/hidden
+        import('../services/SyncService').then(async ({ syncService }) => {
+            try {
+                const { db } = await import('../services/db');
+                await db.transaction('rw', db.tasks, db.journals, async () => {
+                    // Migrate 'test-user' tasks to real user
+                    // Mark as 'created' so they get uploaded to cloud
+                    await db.tasks.where({ userId: 'test-user' }).modify({
+                        userId: userData.id,
+                        syncStatus: 'created'
+                    });
+
+                    await db.journals.where({ userId: 'test-user' }).modify({
+                        userId: userData.id,
+                        syncStatus: 'created'
+                    });
+                });
+                console.log('Migrated guest data to user:', userData.id);
+            } catch (e) {
+                console.error('Failed to migrate guest data', e);
+            }
+
             syncService.initialSync();
         });
     };

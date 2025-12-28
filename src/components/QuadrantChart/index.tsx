@@ -4,7 +4,7 @@ import { ConfirmDialog } from '../ConfirmDialog';
 
 interface QuadrantChartProps {
   tasks: Task[];
-  onTaskMove: (taskId: string, quadrant: 1 | 2 | 3 | 4, newIndex:number) => void;
+  onTaskMove: (taskId: string, quadrant: 1 | 2 | 3 | 4, newIndex: number) => void;
   onTaskClick?: (task: Task) => void;
   onAddTask?: (quadrant: 1 | 2 | 3 | 4) => void;
   onDeleteTask?: (taskId: string) => void;
@@ -67,9 +67,9 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
     // 创建新的指示器
     const indicator = document.createElement('div');
     indicator.className = `drop-indicator h-1 my-1 rounded transition-all duration-200 ${getQuadrantColor(quadrant)}`;
-    
+
     const taskElements = Array.from(taskList.querySelectorAll('.group'));
-    
+
     if (taskElements.length === 0) {
       // 如果象限为空，添加指示器到顶部
       taskList.insertBefore(indicator, taskList.firstChild);
@@ -88,12 +88,12 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
   const handleDrop = async (e: React.DragEvent, quadrant: number, index: number) => {
     e.preventDefault();
     e.stopPropagation(); // 防止事件冒泡
-    
+
     if (!draggedTask) return;
 
     const taskId = e.dataTransfer.getData('taskId');
     console.log('Drop with taskId:', taskId, 'draggedTask:', draggedTask, 'to quadrant:', quadrant, 'at index:', index);
-    
+
     try {
       if (draggedTask.quadrant === quadrant) {
         // 同象限内排序
@@ -147,8 +147,8 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
             </svg>
           </button>
         </div>
-        
-        <div 
+
+        <div
           className="flex-1 overflow-y-auto p-3 task-list custom-scrollbar"
           onDragOver={(e) => {
             e.preventDefault();
@@ -194,8 +194,8 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
                         onToggleComplete?.(task.id!);
                       }}
                       className={`flex-shrink-0 w-5 h-5 rounded-full border-2 
-                        ${task.completed 
-                          ? 'bg-green-500 border-green-500' 
+                        ${task.completed
+                          ? 'bg-green-500 border-green-500'
                           : 'border-gray-300 hover:border-gray-400'}`}
                     >
                       {task.completed && (
@@ -204,18 +204,18 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
                         </svg>
                       )}
                     </button>
-                    <div 
+                    <div
                       className="flex-1 cursor-pointer min-w-0"
                       onClick={() => onTaskClick?.(task)}
                     >
-                      <div 
+                      <div
                         className={`font-medium truncate ${task.completed ? 'line-through text-gray-400' : ''}`}
                         title={task.title}
                       >
                         {truncateText(task.title, 100)}
                       </div>
                       {task.description && (
-                        <div 
+                        <div
                           className="mt-1 text-sm text-gray-500"
                           title={task.description}
                         >
@@ -224,6 +224,7 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
                           </p>
                         </div>
                       )}
+
                     </div>
                   </div>
                 </div>
@@ -282,7 +283,7 @@ export const QuadrantChart: React.FC<QuadrantChartProps> = ({
         {renderQuadrant(3)}
         {renderQuadrant(4)}
       </div>
-      
+
       <ConfirmDialog
         isOpen={taskToDelete !== null && !isDeleting}
         title="删除任务"
