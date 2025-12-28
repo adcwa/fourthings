@@ -59,6 +59,13 @@ export function SyncControls() {
         syncService.setMode(newMode);
     };
 
+    const handleLogout = () => {
+        if (window.confirm('Are you sure you want to logout?')) {
+            const shouldClear = window.confirm('Do you want to clear local data?\n\nClick OK to Clear Data.\nClick Cancel to Keep Data (Offline Mode).');
+            logout(shouldClear);
+        }
+    };
+
     if (isAuthenticated) {
         return (
             <div className="flex items-center gap-2">
@@ -113,7 +120,7 @@ export function SyncControls() {
                 )}
 
                 <button
-                    onClick={logout}
+                    onClick={handleLogout}
                     title="Logout"
                     className="p-2 bg-white border border-gray-200 hover:bg-red-50 text-gray-600 hover:text-red-500 rounded-lg transition-colors shadow-sm"
                 >

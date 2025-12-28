@@ -7,7 +7,7 @@ interface User {
 interface AuthContextType {
     user: User | null;
     login: (token: string, user: User) => void;
-    logout: () => void;
+    logout: (clearData?: boolean) => void;
     isAuthenticated: boolean;
 }
 
@@ -36,18 +36,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
     };
 
-    const logout = async () => {
+    const logout = async (clearData: boolean = false) => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        // Also clear 'syncMode' to reset to default behavior or keep it? 
+        // If we keep data, we probably want to stay in 'offline' mode initially until re-login?
+        // But for security, maybe clear everything related to auth. 
+        // User requested "If not clear, retain...". 
+
         setUser(null);
 
-        // Clear local DB to prevent data leakage between users
-        try {
-            const { db } = await import('../services/db');
-            await db.tasks.clear();
-            await db.journals.clear();
-        } catch (e) {
-            console.error('Failed to clear local DB', e);
+        if (clearData) {
+            // Clear local DB to prevent data leakage between users
+            try {
+                const { db } = await import('../services/db');
+                await db.tasks.clear();
+                await db.journals.clear();
+            } catch (e) {
+                console.error('Failed to clear local DB', e);
+            }
+        } else {
+            // Keep data: Transfer ownership to 'test-user' (Guest) so they are visible
+            // This effectively "converts" cloud tasks to local offline tasks
+            try {
+                const { db } = await import('../services/db');
+                await db.transaction('rw', db.tasks, db.journals, async () => {
+                    await db.tasks.toCollection().modify({ userId: 'test-user', syncStatus: 'created' });
+                    // Mark as 'created' so they sync up if we log in again as a DIFFERENT user? 
+                    // Or if we log in as SAME user, we might get duplicates if we don't watch out.
+                    // But for "Offline Mode", they should be treated as local drafts.
+                    // Let's set syncStatus to 'created' to be safe, so they are pushed if we sync later.
+
+                    await db.journals.toCollection().modify({ userId: 'test-user', syncStatus: 'created' });
+                });
+            } catch (e) {
+                console.error('Failed to transfer local DB ownership', e);
+            }
         }
 
         window.location.reload();
