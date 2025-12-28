@@ -56,3 +56,8 @@ vercel
 vercel dev
 ```
 这将同时启动前端和后端 API，允许你在本地测试完整功能。
+
+## 桌面端部署 (Desktop Deployment)
+
+本项目支持构建为 macOS 桌面应用。
+详细构建指南请参阅: [Desktop Build Guide](./desktop_build.md)
