@@ -41,9 +41,37 @@ export function SyncControls() {
         }
     };
 
+    const [syncMode, setSyncMode] = useState<'offline' | 'cloud'>(syncService.getMode());
+
+    useEffect(() => {
+        // Watch mode changes from other tabs/places
+        const interval = setInterval(() => {
+            const current = syncService.getMode();
+            if (current !== syncMode) setSyncMode(current);
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [syncMode]);
+
+    const toggleMode = () => {
+        const newMode = syncMode === 'offline' ? 'cloud' : 'offline';
+        setSyncMode(newMode);
+        syncService.setMode(newMode);
+    };
+
     if (isAuthenticated) {
         return (
             <div className="fixed top-4 right-4 flex items-center gap-2 z-50">
+                <div
+                    onClick={toggleMode}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer transition-colors ${syncMode === 'cloud' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}
+                    title={`Click to switch to ${syncMode === 'cloud' ? 'Offline' : 'Cloud'} Mode`}
+                >
+                    <div className={`w-2 h-2 rounded-full ${syncMode === 'cloud' ? 'bg-green-500' : 'bg-gray-400'}`} />
+                    <span className="text-xs font-medium uppercase tracking-wider">{syncMode}</span>
+                </div>
+
+                <div className="h-6 w-px bg-gray-200 mx-1"></div>
+
                 <div className="flex flex-col items-end mr-2">
                     <span className="text-xs font-medium text-gray-400">
                         {user?.username}
@@ -55,29 +83,33 @@ export function SyncControls() {
                     )}
                 </div>
 
-                <button
-                    onClick={() => syncService.upload()}
-                    title="Force Upload"
-                    className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
-                >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                </button>
+                {syncMode === 'cloud' && (
+                    <>
+                        <button
+                            onClick={() => syncService.upload()}
+                            title="Force Upload"
+                            className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                        </button>
 
-                <button
-                    onClick={() => {
-                        if (confirm('Overwite local data?')) {
-                            syncService.download();
-                        }
-                    }}
-                    title="Force Download"
-                    className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
-                >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                    </svg>
-                </button>
+                        <button
+                            onClick={() => {
+                                if (confirm('Overwite local data?')) {
+                                    syncService.download();
+                                }
+                            }}
+                            title="Force Download"
+                            className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                            </svg>
+                        </button>
+                    </>
+                )}
 
                 <button
                     onClick={logout}

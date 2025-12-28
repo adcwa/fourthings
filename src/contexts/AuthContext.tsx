@@ -36,10 +36,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
     };
 
-    const logout = () => {
+    const logout = async () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
+
+        // Clear local DB to prevent data leakage between users
+        try {
+            const { db } = await import('../services/db');
+            await db.tasks.clear();
+            await db.journals.clear();
+        } catch (e) {
+            console.error('Failed to clear local DB', e);
+        }
+
+        window.location.reload();
     };
 
     return (

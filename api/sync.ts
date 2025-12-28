@@ -23,6 +23,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const userId = decoded.userId;
 
     if (req.method === 'GET') {
+        const checkMode = req.query.check === 'true';
+
+        if (checkMode) {
+            const client = await pool.connect();
+            try {
+                // Check latest update time for user
+                const taskRes = await client.query('SELECT MAX(updated_at) as t FROM tasks WHERE user_id = $1', [userId]);
+                const journalRes = await client.query('SELECT MAX(updated_at) as t FROM journals WHERE user_id = $1', [userId]);
+
+                const t1 = taskRes.rows[0]?.t ? new Date(taskRes.rows[0].t).getTime() : 0;
+                const t2 = journalRes.rows[0]?.t ? new Date(journalRes.rows[0].t).getTime() : 0;
+
+                res.status(200).json({ timestamp: Math.max(t1, t2) });
+                return;
+            } catch (e) {
+                // If check fails, just return 0
+                res.status(200).json({ timestamp: 0 });
+                return;
+            } finally {
+                client.release();
+            }
+        }
+
         // Download data
         // Download data
         try {
@@ -74,46 +97,62 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             res.status(500).json({ error: error.message, stack: error.stack });
         }
     } else if (req.method === 'POST') {
-        // Upload data (Backup/Sync)
-        const { tasks, journals } = req.body;
-
-        if (!Array.isArray(tasks) || !Array.isArray(journals)) {
-            return res.status(400).json({ error: 'Invalid data format' });
-        }
+        // Incremental Sync (Upsert + Delete)
+        const { tasks, journals, deletedTaskIds, deletedJournalIds } = req.body;
 
         try {
             const client = await pool.connect();
             try {
                 await client.query('BEGIN');
 
-                // Upsert tasks
-                for (const task of tasks) {
+                // 1. Handle Deletions
+                if (Array.isArray(deletedTaskIds) && deletedTaskIds.length > 0) {
                     await client.query(
-                        `INSERT INTO tasks (id, user_id, title, description, quadrant, date, completed, created_at, updated_at, "order")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-             ON CONFLICT (id) DO UPDATE SET
-             title = EXCLUDED.title,
-             description = EXCLUDED.description,
-             quadrant = EXCLUDED.quadrant,
-             date = EXCLUDED.date,
-             completed = EXCLUDED.completed,
-             updated_at = EXCLUDED.updated_at,
-             "order" = EXCLUDED."order"`,
-                        [task.id, userId, task.title, task.description, task.quadrant, task.date, task.completed, task.createdAt, task.updatedAt, task.order]
+                        'DELETE FROM tasks WHERE user_id = $1 AND id = ANY($2)',
+                        [userId, deletedTaskIds]
+                    );
+                }
+                if (Array.isArray(deletedJournalIds) && deletedJournalIds.length > 0) {
+                    await client.query(
+                        'DELETE FROM journals WHERE user_id = $1 AND id = ANY($2)',
+                        [userId, deletedJournalIds]
                     );
                 }
 
-                // Upsert journals
-                for (const journal of journals) {
-                    await client.query(
-                        `INSERT INTO journals (id, user_id, content, date, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6)
-             ON CONFLICT (id) DO UPDATE SET
-             content = EXCLUDED.content,
-             date = EXCLUDED.date,
-             updated_at = EXCLUDED.updated_at`,
-                        [journal.id, userId, journal.content, journal.date, journal.createdAt, journal.updatedAt]
-                    );
+                // 2. Handle Upserts (Tasks)
+                if (Array.isArray(tasks)) {
+                    for (const task of tasks) {
+                        await client.query(
+                            `INSERT INTO tasks (id, user_id, title, description, quadrant, date, completed, created_at, updated_at, "order")
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                             ON CONFLICT (id) DO UPDATE SET
+                                title = EXCLUDED.title,
+                                description = EXCLUDED.description,
+                                quadrant = EXCLUDED.quadrant,
+                                date = EXCLUDED.date,
+                                completed = EXCLUDED.completed,
+                                updated_at = EXCLUDED.updated_at,
+                                "order" = EXCLUDED."order"
+                             WHERE tasks.user_id = $2`, // Security check: ensure we only update user's own tasks (though ID uniqness usually handles it)
+                            [task.id, userId, task.title, task.description, task.quadrant, task.date, task.completed, task.createdAt, task.updatedAt, task.order]
+                        );
+                    }
+                }
+
+                // 3. Handle Upserts (Journals)
+                if (Array.isArray(journals)) {
+                    for (const journal of journals) {
+                        await client.query(
+                            `INSERT INTO journals (id, user_id, content, date, created_at, updated_at)
+                             VALUES ($1, $2, $3, $4, $5, $6)
+                             ON CONFLICT (id) DO UPDATE SET
+                                content = EXCLUDED.content,
+                                date = EXCLUDED.date,
+                                updated_at = EXCLUDED.updated_at
+                             WHERE journals.user_id = $2`,
+                            [journal.id, userId, journal.content, journal.date, journal.createdAt, journal.updatedAt]
+                        );
+                    }
                 }
 
                 await client.query('COMMIT');

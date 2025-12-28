@@ -11,6 +11,7 @@ export interface Task {
   createdAt: Date;
   updatedAt: Date;
   order: number;
+  syncStatus?: 'synced' | 'created' | 'updated' | 'deleted';
 }
 
 export interface JournalEntry {
@@ -20,6 +21,7 @@ export interface JournalEntry {
   userId: string;
   createdAt: Date;
   updatedAt: Date;
+  syncStatus?: 'synced' | 'created' | 'updated' | 'deleted';
 }
 
 export interface User {
@@ -39,10 +41,10 @@ class QuadrantDB extends Dexie {
 
   constructor() {
     super('QuadrantDB');
-    
-    this.version(1).stores({}).upgrade(() => {});
-    this.version(2).stores({}).upgrade(() => {});
-    
+
+    this.version(1).stores({}).upgrade(() => { });
+    this.version(2).stores({}).upgrade(() => { });
+
     this.version(4).stores({
       tasks: 'id, userId, date, quadrant, completed, order',
       journals: 'id, userId, date',
@@ -71,7 +73,7 @@ const initializeTestData = async () => {
         updatedAt: new Date(),
         order: 0
       };
-      
+
       console.log('Initializing with task:', task);
       await db.tasks.add(task);
       console.log('Added test task with ID:', taskId);
@@ -86,10 +88,10 @@ const initializeTestData = async () => {
 const initDatabase = async () => {
   try {
     const isNewVersion = !await Dexie.exists('QuadrantDB');
-    
+
     await db.open();
     console.log('Database opened successfully');
-    
+
     if (isNewVersion) {
       await initializeTestData();
     }

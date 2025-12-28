@@ -7,6 +7,7 @@ export function useTasks(userId: string, date: string) {
       try {
         const result = await db.tasks
           .where({ userId: userId, date: date })
+          .filter(t => t.syncStatus !== 'deleted')
           .sortBy('order');
         return result;
       } catch (error) {
@@ -28,9 +29,11 @@ export function useTasks(userId: string, date: string) {
       const newTask = {
         ...task,
         id: crypto.randomUUID(),
+        userId: userId, // Force use current userId
         order: maxOrder,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        syncStatus: 'created' as const
       };
 
       const id = await db.tasks.add(newTask);
@@ -43,20 +46,26 @@ export function useTasks(userId: string, date: string) {
   };
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
+    const task = await db.tasks.get(id);
+    const newStatus = task?.syncStatus === 'created' ? 'created' : 'updated';
     return await db.tasks.update(id, {
       ...updates,
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      syncStatus: newStatus
     });
   };
 
   const deleteTask = async (id: string) => {
-    return await db.tasks.delete(id);
+    return await db.tasks.update(id, {
+      syncStatus: 'deleted',
+      updatedAt: new Date()
+    });
   };
 
   const moveTask = async (taskId: string, targetQuadrant: 1 | 2 | 3 | 4, targetIndex?: number) => {
     try {
       console.log('Moving task in DB:', taskId, targetQuadrant, targetIndex);
-      
+
       const task = await db.tasks.get(taskId);
       if (!task) {
         throw new Error(`Task not found: ${taskId}`);
@@ -87,7 +96,8 @@ export function useTasks(userId: string, date: string) {
       await db.tasks.update(taskId, {
         quadrant: targetQuadrant,
         order: newOrder,
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        syncStatus: 'updated' // Moving counts as update
       });
 
       // 如果 order 值过于接近，重新排序整个象限
@@ -103,7 +113,7 @@ export function useTasks(userId: string, date: string) {
 
   const reorderTasks = async (quadrant: 1 | 2 | 3 | 4) => {
     console.log('Reordering tasks in quadrant:', quadrant);
-    
+
     const tasks = await db.tasks
       .where({ userId, date, quadrant })
       .sortBy('order');
@@ -113,15 +123,19 @@ export function useTasks(userId: string, date: string) {
     // 重新分配 order 值，使用较大的增量
     const updates = tasks.map((task, index) => ({
       ...task,
-      order: (index + 1) * 1000
+      order: (index + 1) * 1000,
+      syncStatus: task.syncStatus === 'created' ? 'created' : 'updated'
     }));
 
     console.log('Updated order values:', updates);
 
     // 批量更新
     await Promise.all(
-      updates.map(task => 
-        db.tasks.update(task.id!, { order: task.order })
+      updates.map(task =>
+        db.tasks.update(task.id!, {
+          order: task.order,
+          syncStatus: task.syncStatus
+        })
       )
     );
   };
