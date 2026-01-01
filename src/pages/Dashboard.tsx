@@ -130,7 +130,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ statusFilter, searchQuery 
                 ...editingTask,
                 quadrant: initialQuadrant || editingTask?.quadrant || 1
               }}
-              onSubmit={async (task) => {
+              onSubmit={async (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order' | 'version'>) => {
                 if (editingTask) {
                   await updateTask(editingTask.id!, task);
                 } else {

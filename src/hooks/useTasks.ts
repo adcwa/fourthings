@@ -62,7 +62,7 @@ export function useTasks(
     [userId, date, statusFilter, searchQuery]
   );
 
-  const addTask = async (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order'>) => {
+  const addTask = async (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order' | 'version'>) => {
     try {
       const maxOrder = await db.tasks
         .where({ userId, date, quadrant: task.quadrant })

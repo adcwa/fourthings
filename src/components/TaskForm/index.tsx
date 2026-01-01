@@ -3,7 +3,7 @@ import { Task, SubTask } from '../../services/db';
 
 interface TaskFormProps {
   initialValues?: Partial<Task>;
-  onSubmit: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order'>) => void;
+  onSubmit: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order' | 'version'>) => void;
   onCancel: () => void;
 }
 
