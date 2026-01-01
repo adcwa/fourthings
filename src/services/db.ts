@@ -59,24 +59,110 @@ const initializeTestData = async () => {
   try {
     const count = await db.tasks.count();
     if (count === 0) {
-      console.log('Adding test task');
-      const taskId = crypto.randomUUID();
-      const task = {
-        id: taskId,
-        title: '测试任务',
-        description: '这是一个测试任务',
-        quadrant: 1 as const,
-        date: new Date().toISOString().split('T')[0],
-        completed: false,
-        userId: 'test-user',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        order: 0
-      };
+      console.log('Initializing with sample tasks');
+      const today = new Date().toISOString().split('T')[0];
 
-      console.log('Initializing with task:', task);
-      await db.tasks.add(task);
-      console.log('Added test task with ID:', taskId);
+      const sampleTasks = [
+        {
+          id: crypto.randomUUID(),
+          title: '解决紧急生产 Bug',
+          description: '线上支付系统出现间歇性延迟，需要立即排查',
+          quadrant: 1 as const,
+          date: today,
+          completed: false,
+          userId: 'test-user',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          order: 1000
+        },
+        {
+          id: crypto.randomUUID(),
+          title: '准备项目周报',
+          description: '整理本周进度、阻碍点及下周计划',
+          quadrant: 1 as const,
+          date: today,
+          completed: false,
+          userId: 'test-user',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          order: 2000
+        },
+        {
+          id: crypto.randomUUID(),
+          title: '下周工作规划',
+          description: '思考核心目标，分解关键任务',
+          quadrant: 2 as const,
+          date: today,
+          completed: false,
+          userId: 'test-user',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          order: 1000
+        },
+        {
+          id: crypto.randomUUID(),
+          title: '阅读行业优秀文章',
+          description: '保持对前沿技术的关注和思考',
+          quadrant: 2 as const,
+          date: today,
+          completed: false,
+          userId: 'test-user',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          order: 2000
+        },
+        {
+          id: crypto.randomUUID(),
+          title: '回复非紧要邮件',
+          description: '批量处理收件箱，释放注意力',
+          quadrant: 3 as const,
+          date: today,
+          completed: false,
+          userId: 'test-user',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          order: 1000
+        },
+        {
+          id: crypto.randomUUID(),
+          title: '社群消息处理',
+          description: '查看并回复微信群/Slack 消息',
+          quadrant: 3 as const,
+          date: today,
+          completed: false,
+          userId: 'test-user',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          order: 2000
+        },
+        {
+          id: crypto.randomUUID(),
+          title: '整理办公桌面',
+          description: '清理杂物，营造清爽的办公环境',
+          quadrant: 4 as const,
+          date: today,
+          completed: false,
+          userId: 'test-user',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          order: 1000
+        },
+        {
+          id: crypto.randomUUID(),
+          title: '随意浏览网页',
+          description: '休息并获取一些随机灵感',
+          quadrant: 4 as const,
+          date: today,
+          completed: false,
+          userId: 'test-user',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          order: 2000
+        }
+      ];
+
+      await db.tasks.bulkAdd(sampleTasks);
+      console.log('Successfully initialized with sample tasks');
     } else {
       console.log('Database already has tasks, skipping initialization');
     }
