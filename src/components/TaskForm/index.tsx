@@ -1,5 +1,5 @@
 import React from 'react';
-import { Task } from '../../services/db';
+import { Task, SubTask } from '../../services/db';
 
 interface TaskFormProps {
   initialValues?: Partial<Task>;
@@ -14,6 +14,19 @@ const QuadrantOptions = [
   { value: 4, label: '不重要不紧急', color: 'bg-gray-50 text-gray-700 border-gray-200' }
 ];
 
+const StatusOptions = [
+  { value: 'todo', label: '待办', icon: '📝' },
+  { value: 'in_progress', label: '进行中', icon: '⚡' },
+  { value: 'blocked', label: '已阻塞', icon: '🚫' },
+  { value: 'cancelled', label: '已取消', icon: '✖️' }
+];
+
+const PriorityOptions = [
+  { value: 'high', label: '高优先级', color: 'text-red-600' },
+  { value: 'medium', label: '中优先级', color: 'text-blue-600' },
+  { value: 'low', label: '低优先级', color: 'text-gray-500' }
+];
+
 export const TaskForm: React.FC<TaskFormProps> = ({
   initialValues,
   onSubmit,
@@ -22,21 +35,54 @@ export const TaskForm: React.FC<TaskFormProps> = ({
   const [title, setTitle] = React.useState(initialValues?.title || '');
   const [description, setDescription] = React.useState(initialValues?.description || '');
   const [quadrant, setQuadrant] = React.useState<1 | 2 | 3 | 4>(initialValues?.quadrant || 1);
+  const [status, setStatus] = React.useState(initialValues?.status || 'todo');
+  const [priority, setPriority] = React.useState(initialValues?.priority || 'medium');
+  const [dueDate, setDueDate] = React.useState(initialValues?.dueDate || '');
+  const [tags, setTags] = React.useState(initialValues?.tags?.join(', ') || '');
+  const [subtasks, setSubtasks] = React.useState<SubTask[]>(initialValues?.subtasks || []);
+  const [newSubtask, setNewSubtask] = React.useState('');
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Calculate progress based on subtasks
+    const progress = subtasks.length > 0
+      ? Math.round((subtasks.filter(s => s.completed).length / subtasks.length) * 100)
+      : (status === 'todo' ? 0 : status === 'in_progress' ? 50 : 0);
+
     onSubmit({
       title,
       description,
       quadrant,
-      date: new Date().toISOString().split('T')[0],
-      completed: false,
-      userId: 'test-user'
+      date: initialValues?.date || new Date().toISOString().split('T')[0],
+      completed: initialValues?.completed || false,
+      userId: initialValues?.userId || 'test-user',
+      status: status as any,
+      priority: priority as any,
+      dueDate,
+      tags: tags.split(',').map(tag => tag.trim()).filter(Boolean),
+      subtasks,
+      progress
     });
   };
 
+  const addSubtask = () => {
+    if (!newSubtask.trim()) return;
+    setSubtasks([...subtasks, { id: crypto.randomUUID(), title: newSubtask.trim(), completed: false }]);
+    setNewSubtask('');
+  };
+
+  const toggleSubtask = (id: string) => {
+    setSubtasks(subtasks.map(s => s.id === id ? { ...s, completed: !s.completed } : s));
+  };
+
+  const removeSubtask = (id: string) => {
+    setSubtasks(subtasks.filter(s => s.id !== id));
+  };
+
   return (
-    <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full mx-auto p-6">
+    <div className="relative bg-white rounded-xl shadow-2xl max-w-lg w-full mx-auto p-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
       {/* 关闭按钮 */}
       <button
         onClick={onCancel}
@@ -53,65 +99,166 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* 任务标题输入 */}
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-            任务标题
-          </label>
-          <input
-            id="title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-            placeholder="输入任务标题..."
-          />
-        </div>
+        {/* 主要信息 */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">任务名称</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="做什么？"
+            />
+          </div>
 
-        {/* 任务描述输入 */}
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-            任务描述
-          </label>
-          <textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none resize-none"
-            rows={3}
-            placeholder="输入任务描述..."
-          />
-        </div>
-
-        {/* 象限选择 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            选择象限
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            {QuadrantOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setQuadrant(option.value as 1 | 2 | 3 | 4)}
-                className={`
-                  p-3 rounded-lg border transition-all text-sm
-                  ${option.color}
-                  ${quadrant === option.value 
-                    ? 'ring-2 ring-offset-2 ring-blue-500 border-transparent' 
-                    : 'hover:bg-opacity-70'
-                  }
-                `}
-              >
-                {option.label}
-              </button>
-            ))}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">补充描述 (可选)</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+              rows={2}
+              placeholder="详细描述一下..."
+            />
           </div>
         </div>
 
-        {/* 操作按钮 */}
-        <div className="flex gap-3 pt-2">
+        {/* 核心设置：象限与状态 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">所属象限</label>
+            <div className="space-y-2">
+              {QuadrantOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setQuadrant(opt.value as 1 | 2 | 3 | 4)}
+                  className={`w-full text-left px-3 py-2 rounded-lg border text-xs transition-all ${quadrant === opt.value ? 'ring-2 ring-blue-500 border-transparent shadow-sm' : 'border-gray-100 hover:bg-gray-50'
+                    } ${opt.color}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">执行状态</label>
+            <div className="grid grid-cols-2 gap-2">
+              {StatusOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setStatus(opt.value as any)}
+                  className={`px-3 py-2 rounded-lg border text-xs flex items-center justify-center gap-1 transition-all ${status === opt.value ? 'bg-blue-500 text-white border-transparent' : 'bg-white text-gray-600 border-gray-100 hover:bg-gray-50'
+                    }`}
+                >
+                  <span>{opt.icon}</span>
+                  <span>{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 子任务板块 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">子任务清单</label>
+          <div className="space-y-2 mb-3">
+            {subtasks.map((st) => (
+              <div key={st.id} className="flex items-center gap-2 group">
+                <input
+                  type="checkbox"
+                  checked={st.completed}
+                  onChange={() => toggleSubtask(st.id)}
+                  className="w-4 h-4 text-blue-500 rounded focus:ring-blue-400"
+                />
+                <span className={`flex-1 text-sm ${st.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                  {st.title}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeSubtask(st.id)}
+                  className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newSubtask}
+              onChange={(e) => setNewSubtask(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSubtask())}
+              className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 outline-none"
+              placeholder="添加步骤..."
+            />
+            <button
+              type="button"
+              onClick={addSubtask}
+              className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition-colors"
+            >
+              添加
+            </button>
+          </div>
+        </div>
+
+        {/* 高级选项切换 */}
+        <button
+          type="button"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="text-xs text-blue-500 hover:underline flex items-center gap-1"
+        >
+          {showAdvanced ? '隐藏高级选项' : '显示更多选项 (时间、标签、优先级...)'}
+        </button>
+
+        {showAdvanced && (
+          <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-100 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1 text-xs">截止时间</label>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full px-3 py-1.5 border border-gray-200 rounded-md text-sm outline-none bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1 text-xs">紧急程度</label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as any)}
+                  className="w-full px-3 py-1.5 border border-gray-200 rounded-md text-sm outline-none bg-white"
+                >
+                  {PriorityOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1 text-xs">标签 (逗号分隔)</label>
+              <input
+                type="text"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                className="w-full px-3 py-1.5 border border-gray-200 rounded-md text-sm outline-none bg-white"
+                placeholder="工作, 个人, 创意..."
+              />
+            </div>
+          </div>
+        )}
+
+        {/* 底部按钮 */}
+        <div className="flex gap-3 pt-4 border-t border-gray-50">
           <button
             type="button"
             onClick={onCancel}
@@ -121,9 +268,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({
           </button>
           <button
             type="submit"
-            className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100 font-medium"
           >
-            {initialValues ? '保存' : '创建'}
+            {initialValues ? '确认更新' : '立即创建'}
           </button>
         </div>
       </form>

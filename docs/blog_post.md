@@ -57,8 +57,9 @@
 
 别让琐事淹没你的重要目标。从今天开始，用 **FourThings** 重新定义你的工作流。
 
-👉 **在线体验**: [Project URL Here]
-🌟 **GitHub 源码**: [GitHub URL Here]
+👉 **在线体验**: https://fourthings.today/
+🌟 **GitHub 源码**: https://github.com/adcwa/fourthings
+
 
 **FourThings —— 做哪怕只有四件事，但都是对的事。**
 

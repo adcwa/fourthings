@@ -14,7 +14,7 @@ export function useTasks(
   const tasks = useLiveQuery(
     async () => {
       try {
-        let collection = db.tasks.where({ userId: userId });
+        let collection = db.tasks.where('userId').equals(userId);
 
         // Date filter is ignored if searching (global search)
         // Or should we search within the day? User requirement "Fuzzy Search" implies finding tasks.
@@ -77,7 +77,8 @@ export function useTasks(
         order: maxOrder,
         createdAt: new Date(),
         updatedAt: new Date(),
-        syncStatus: 'created' as const
+        syncStatus: 'created' as const,
+        version: 1
       };
 
       const id = await db.tasks.add(newTask);
@@ -92,17 +93,22 @@ export function useTasks(
   const updateTask = async (id: string, updates: Partial<Task>) => {
     const task = await db.tasks.get(id);
     const newStatus = task?.syncStatus === 'created' ? 'created' : 'updated';
+    const newVersion = (task?.version || 0) + 1;
     return await db.tasks.update(id, {
       ...updates,
       updatedAt: new Date(),
-      syncStatus: newStatus
+      syncStatus: newStatus,
+      version: newVersion
     });
   };
 
   const deleteTask = async (id: string) => {
+    const task = await db.tasks.get(id);
+    const newVersion = (task?.version || 0) + 1;
     return await db.tasks.update(id, {
       syncStatus: 'deleted',
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      version: newVersion
     });
   };
 
@@ -141,7 +147,8 @@ export function useTasks(
         quadrant: targetQuadrant,
         order: newOrder,
         updatedAt: new Date(),
-        syncStatus: 'updated' // Moving counts as update
+        syncStatus: 'updated', // Moving counts as update
+        version: (task.version || 0) + 1
       });
 
       // 如果 order 值过于接近，重新排序整个象限
@@ -168,7 +175,8 @@ export function useTasks(
     const updates = tasks.map((task, index) => ({
       ...task,
       order: (index + 1) * 1000,
-      syncStatus: task.syncStatus === 'created' ? 'created' : 'updated'
+      syncStatus: task.syncStatus === 'created' ? 'created' : 'updated',
+      version: (task.version || 0) + 1
     }));
 
     console.log('Updated order values:', updates);
@@ -178,7 +186,9 @@ export function useTasks(
       updates.map(task =>
         db.tasks.update(task.id!, {
           order: task.order,
-          syncStatus: task.syncStatus
+          syncStatus: task.syncStatus,
+          version: task.version,
+          updatedAt: new Date()
         })
       )
     );

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { QuadrantChart } from '../components/QuadrantChart';
 import { TaskForm } from '../components/TaskForm';
 import { useTasks } from '../hooks/useTasks';
-import { format } from 'date-fns';
 import { Task } from '../services/db';
 import Dexie from 'dexie';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,7 +13,7 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ statusFilter, searchQuery }) => {
   const { user } = useAuth();
-  const [selectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedDate] = useState(new Date().toLocaleDateString('en-CA'));
   const currentUserId = user?.id || 'test-user';
 
 

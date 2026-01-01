@@ -96,52 +96,40 @@ export class SyncService {
         this.notify('Syncing...');
 
         try {
-            // 1. Get ALL local data (including deleted ones we need to prune on server)
-            const allTasks = await db.tasks.toArray();
-            const allJournals = await db.journals.toArray();
+            // 1. Get ALL local data for CURRENT user
+            const userData = localStorage.getItem('user');
+            if (!userData) return;
+            const { id: userId } = JSON.parse(userData);
 
-            // 2. Filter for payload: INCREMENTAL SYNC
-            // Send:
-            // - Tasks that are NOT synced (created OR updated)
-            // - Deleted IDs (tasks with syncStatus === 'deleted')
+            const allTasks = await db.tasks.where('userId').equals(userId).toArray();
+            const allJournals = await db.journals.where('userId').equals(userId).toArray();
 
-            const tasksPayload = allTasks.filter(t => t.syncStatus === 'created' || t.syncStatus === 'updated');
-            const journalsPayload = allJournals.filter(j => j.syncStatus === 'created' || j.syncStatus === 'updated');
+            // 2. Full Snapshot Model: 
+            // Send ALL active tasks and journals to the server.
+            // Items marked as 'deleted' are NOT sent; the server will delete everything 
+            // and replace with this snapshot.
+            const tasksPayload = allTasks.filter(t => t.syncStatus !== 'deleted');
+            const journalsPayload = allJournals.filter(j => j.syncStatus !== 'deleted');
 
             const deletedTaskIds = allTasks.filter(t => t.syncStatus === 'deleted').map(t => t.id!);
             const deletedJournalIds = allJournals.filter(j => j.syncStatus === 'deleted').map(j => j.id!);
 
-            // Optimization: If nothing to sync, skip
-            if (tasksPayload.length === 0 && journalsPayload.length === 0 && deletedTaskIds.length === 0 && deletedJournalIds.length === 0) {
-                console.log('Nothing to upload');
-                this.notify('Synced');
-                setTimeout(() => this.notify(''), 2000);
-                return;
-            }
+            console.log(`[Sync Upload] Snapshot: ${tasksPayload.length} tasks, ${journalsPayload.length} journals. Deleting: ${deletedTaskIds.length} tasks locally.`);
 
             await api.post('/sync', {
                 tasks: tasksPayload,
-                journals: journalsPayload,
-                deletedTaskIds,
-                deletedJournalIds
+                journals: journalsPayload
             });
 
-            // 3. On success, process local state
+            // 3. On success:
             await db.transaction('rw', db.tasks, db.journals, async () => {
-                // Hard Delete items that were marked 'deleted'
+                // A. Hard Delete items that were marked 'deleted' locally
                 if (deletedTaskIds.length > 0) await db.tasks.bulkDelete(deletedTaskIds);
                 if (deletedJournalIds.length > 0) await db.journals.bulkDelete(deletedJournalIds);
 
-                // Mark uploaded items as 'synced'
-                const tasksToSync = tasksPayload.map(t => t.id!);
-                if (tasksToSync.length > 0) {
-                    await db.tasks.where('id').anyOf(tasksToSync).modify({ syncStatus: 'synced' });
-                }
-
-                const journalsToSync = journalsPayload.map(j => j.id!);
-                if (journalsToSync.length > 0) {
-                    await db.journals.where('id').anyOf(journalsToSync).modify({ syncStatus: 'synced' });
-                }
+                // B. Mark all other local items as 'synced'
+                await db.tasks.where('syncStatus').notEqual('deleted').modify({ syncStatus: 'synced' });
+                await db.journals.where('syncStatus').notEqual('deleted').modify({ syncStatus: 'synced' });
             });
 
             this.notify('Synced');
@@ -149,8 +137,6 @@ export class SyncService {
         } catch (error) {
             console.error('Upload failed:', error);
             this.notify('Sync Failed ⚠️');
-            // If upload failed, we might want to retry? 
-            // For now, rely on next hook or manual sync.
         } finally {
             this.isSyncing = false;
             if (this.pendingUpload) {
@@ -206,13 +192,22 @@ export class SyncService {
                 }
 
                 // B. Upsert Server Items
-                // Only overwrite if local is 'synced' (or doesn't exist).
-                // If local is 'dirty', we SKIP (Conflict: Local Wins for now)
+                // NEW: Version-based Win strategy (LWW)
+                // We overwrite if:
+                // 1. Local item doesn't exist
+                // 2. Server version > Local version
+                // 3. Server version == Local version AND Server updatedAt > Local updatedAt
                 const tasksToPut: Task[] = [];
                 for (const st of serverTasks) {
                     const lt = localTaskMap.get(st.id);
-                    if (!lt || lt.syncStatus === 'synced') {
+                    if (!lt) {
                         tasksToPut.push(st as Task);
+                    } else {
+                        const sTime = st.updatedAt.getTime();
+                        const lTime = lt.updatedAt.getTime();
+                        if (st.version > lt.version || (st.version === lt.version && sTime > lTime)) {
+                            tasksToPut.push(st as Task);
+                        }
                     }
                 }
                 if (tasksToPut.length > 0) {
@@ -235,8 +230,14 @@ export class SyncService {
                 const journalsToPut: JournalEntry[] = [];
                 for (const sj of serverJournals) {
                     const lj = localJournalMap.get(sj.id);
-                    if (!lj || lj.syncStatus === 'synced') {
+                    if (!lj) {
                         journalsToPut.push(sj as JournalEntry);
+                    } else {
+                        const sTime = sj.updatedAt.getTime();
+                        const lTime = lj.updatedAt.getTime();
+                        if (sj.version > lj.version || (sj.version === lj.version && sTime > lTime)) {
+                            journalsToPut.push(sj as JournalEntry);
+                        }
                     }
                 }
                 if (journalsToPut.length > 0) {
