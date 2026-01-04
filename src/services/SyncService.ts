@@ -266,15 +266,15 @@ export class SyncService {
         if (!localStorage.getItem('token')) return;
         if (this.mode === 'offline') return;
 
-        // 1. Push changes first (so we don't overwrite them with download if logic was weak, 
-        // implies we trust local more recently).
-        // Actually, Upload handles its own safety.
-        console.log('Initial Sync: Pushing local changes...');
-        await this.upload();
-
-        // 2. Then Pull latest
+        // 1. Pull latest first
+        // This is critical to avoid overwriting cloud data with an empty local state
+        // when logging in on a new device.
         console.log('Initial Sync: Pulling remote changes...');
         await this.download();
+
+        // 2. Push any remaining local changes (e.g. from guest mode migration)
+        console.log('Initial Sync: Pushing local changes...');
+        await this.upload();
 
         this.startPolling();
     }
